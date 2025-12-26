@@ -4,65 +4,57 @@ import { useEffect, useRef, useState } from 'react';
 
 export function FluidBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isMobile, setIsMobile] = useState(false);
-  const [isReducedMotion, setIsReducedMotion] = useState(false);
+  const [isMobile, setIsMobile] = useState(true); // デフォルトでモバイルとして扱う
 
   useEffect(() => {
-    // モバイル判定
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 640);
     };
     checkMobile();
     window.addEventListener('resize', checkMobile, { passive: true });
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
-    // モーション削減設定を確認
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    setIsReducedMotion(prefersReducedMotion);
+  // モーション削減設定を確認
+  const prefersReducedMotion = typeof window !== 'undefined' 
+    ? window.matchMedia('(prefers-reduced-motion: reduce)').matches 
+    : false;
 
+  // モバイルまたはモーション削減設定の場合は静的な背景のみ
+  if (isMobile || prefersReducedMotion) {
+    return (
+      <div
+        className="fixed inset-0 pointer-events-none z-0"
+        style={{ background: '#FEFCFB' }}
+      />
+    );
+  }
+
+  // PC: 軽量なCanvasアニメーション（極限まで最適化）
+  useEffect(() => {
     const canvas = canvasRef.current;
-    // モバイルまたはモーション削減設定の場合は無効化
-    if (!canvas || prefersReducedMotion || window.innerWidth < 640) {
-      return () => window.removeEventListener('resize', checkMobile);
-    }
+    if (!canvas || isMobile) return;
 
-    const ctx = canvas.getContext('2d', { alpha: false }); // アルファチャンネル無効化でパフォーマンス向上
-    if (!ctx) {
-      return () => window.removeEventListener('resize', checkMobile);
-    }
+    const ctx = canvas.getContext('2d', { alpha: false });
+    if (!ctx) return;
 
-    // キャンバスサイズの設定
-    const resizeCanvas = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas, { passive: true });
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 
-    // 流体アニメーションの設定（最適化版：パーティクル数をさらに削減）
-    const particles: Array<{
-      x: number;
-      y: number;
-      vx: number;
-      vy: number;
-      radius: number;
-    }> = [];
-
-    // パーティクル数を削減（20→10）
-    const particleCount = 10;
-    for (let i = 0; i < particleCount; i++) {
+    // パーティクル数を極限まで削減（5個のみ）
+    const particles: Array<{ x: number; y: number; vx: number; vy: number }> = [];
+    for (let i = 0; i < 5; i++) {
       particles.push({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.2, // 速度をさらに下げる
-        vy: (Math.random() - 0.5) * 0.2,
-        radius: Math.random() * 60 + 30, // 半径をさらに小さく
+        vx: (Math.random() - 0.5) * 0.1,
+        vy: (Math.random() - 0.5) * 0.1,
       });
     }
 
-    // アニメーションループ（フレームレート制限）
     let animationId: number;
     let lastTime = 0;
-    const targetFPS = 20; // 30fps→20fps
+    const targetFPS = 15; // 15fps
     const frameInterval = 1000 / targetFPS;
 
     const animate = (currentTime: number) => {
@@ -74,7 +66,7 @@ export function FluidBackground() {
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      particles.forEach((particle, i) => {
+      particles.forEach((particle) => {
         particle.x += particle.vx;
         particle.y += particle.vy;
 
@@ -84,40 +76,10 @@ export function FluidBackground() {
         particle.x = Math.max(0, Math.min(canvas.width, particle.x));
         particle.y = Math.max(0, Math.min(canvas.height, particle.y));
 
-        const gradient = ctx.createRadialGradient(
-          particle.x,
-          particle.y,
-          0,
-          particle.x,
-          particle.y,
-          particle.radius
-        );
-        gradient.addColorStop(0, 'rgba(255, 252, 248, 0.2)'); // 透明度をさらに下げる
-        gradient.addColorStop(0.5, 'rgba(250, 248, 245, 0.1)');
-        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-
-        ctx.fillStyle = gradient;
+        ctx.fillStyle = 'rgba(255, 252, 248, 0.15)';
         ctx.beginPath();
-        ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+        ctx.arc(particle.x, particle.y, 40, 0, Math.PI * 2);
         ctx.fill();
-
-        // 接続線の描画を簡略化（距離チェックを緩和、描画回数を削減）
-        if (i % 2 === 0) { // 偶数インデックスのみ接続線を描画
-          particles.slice(i + 1).forEach((otherParticle) => {
-            const dx = particle.x - otherParticle.x;
-            const dy = particle.y - otherParticle.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-
-            if (distance < 100) { // 距離をさらに短く
-              ctx.strokeStyle = `rgba(250, 248, 245, ${0.1 * (1 - distance / 100)})`;
-              ctx.lineWidth = 0.3; // 線をさらに細く
-              ctx.beginPath();
-              ctx.moveTo(particle.x, particle.y);
-              ctx.lineTo(otherParticle.x, otherParticle.y);
-              ctx.stroke();
-            }
-          });
-        }
       });
 
       animationId = requestAnimationFrame(animate);
@@ -125,22 +87,17 @@ export function FluidBackground() {
 
     animationId = requestAnimationFrame(animate);
 
-    return () => {
-      window.removeEventListener('resize', resizeCanvas);
-      window.removeEventListener('resize', checkMobile);
-      cancelAnimationFrame(animationId);
+    const handleResize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
     };
-  }, []);
+    window.addEventListener('resize', handleResize, { passive: true });
 
-  // モバイルまたはモーション削減設定の場合は静的な背景のみ
-  if (isMobile || isReducedMotion) {
-    return (
-      <div
-        className="fixed inset-0 pointer-events-none z-0"
-        style={{ background: '#FEFCFB' }}
-      />
-    );
-  }
+    return () => {
+      cancelAnimationFrame(animationId);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [isMobile]);
 
   return (
     <canvas

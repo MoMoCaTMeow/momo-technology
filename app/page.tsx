@@ -63,7 +63,7 @@ function HomePage() {
         <MasonryGrid
           images={filteredImages}
           onImageClick={handleImageClick}
-          itemsPerPage={20}
+          itemsPerPage={12}
         />
       </section>
 

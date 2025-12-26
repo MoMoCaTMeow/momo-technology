@@ -14,7 +14,7 @@ interface ImageItemProps {
   onClick: () => void;
 }
 
-// モバイル用の超軽量コンポーネント（Framer Motion完全不使用、最小限の処理）
+// モバイル用の超軽量コンポーネント（極限まで最適化）
 const MobileImageItem = memo(function MobileImageItem({ 
   image, 
   columnIndex = 0,
@@ -23,14 +23,13 @@ const MobileImageItem = memo(function MobileImageItem({
 }: Omit<ImageItemProps, 'index' | 'columns'>) {
   const ref = useRef<HTMLDivElement>(null);
   const [shouldLoad, setShouldLoad] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
 
   // モバイル: 交互に斜めに回転（CSS変数で管理）
   const rotation = columnIndex === 0 
     ? (imageIndex % 2 === 0 ? -3 : 3) 
     : (imageIndex % 2 === 0 ? 3 : -3);
 
-  // Intersection Observer（最適化版：より早くトリガー、シンプルに）
+  // Intersection Observer（極限まで最適化）
   useEffect(() => {
     const currentRef = ref.current;
     if (!currentRef || shouldLoad) return;
@@ -39,69 +38,47 @@ const MobileImageItem = memo(function MobileImageItem({
       ([entry]) => {
         if (entry.isIntersecting) {
           setShouldLoad(true);
-          observer.disconnect(); // 一度トリガーしたら切断
+          observer.disconnect();
         }
       },
       { 
         threshold: 0,
-        rootMargin: '150px' // 150px手前で読み込み開始（より早く）
+        rootMargin: '200px' // 200px手前で読み込み開始
       }
     );
 
     observer.observe(currentRef);
-
-    return () => {
-      observer.disconnect();
-    };
+    return () => observer.disconnect();
   }, [shouldLoad]);
-
-  // 画像の読み込み完了を検知
-  useEffect(() => {
-    if (!shouldLoad) return;
-    
-    const img = new window.Image();
-    img.onload = () => setIsLoaded(true);
-    img.onerror = () => setIsLoaded(true); // エラーでも表示
-    img.src = image.src;
-  }, [shouldLoad, image.src]);
 
   return (
     <div
       ref={ref}
-      className="group relative overflow-hidden cursor-pointer rounded-lg"
+      className="relative overflow-hidden cursor-pointer rounded-lg"
       style={{
         transform: `rotate(${rotation}deg)`,
         aspectRatio: `${1 / image.aspectRatio}`,
         opacity: shouldLoad ? 1 : 0,
-        transition: 'opacity 0.2s ease-out',
+        transition: 'opacity 0.15s ease-out',
       }}
       onClick={onClick}
     >
       <div className="relative w-full h-full overflow-hidden bg-gray-100 rounded-lg">
         {shouldLoad && (
-          <>
-            <Image
-              src={image.src}
-              alt={image.alt}
-              fill
-              className={`object-cover ${
-                isLoaded ? 'opacity-100' : 'opacity-0'
-              }`}
-              style={{
-                transition: 'opacity 0.3s ease-out',
-              }}
-              sizes="(max-width: 640px) 50vw, 50vw"
-              loading="lazy"
-              decoding="async"
-              quality={40} // モバイル: さらに低品質（40）
-              priority={false}
-              unoptimized={false}
-            />
-            {/* プレースホルダー（シンプル） */}
-            {!isLoaded && (
-              <div className="absolute inset-0 bg-gray-200" />
-            )}
-          </>
+          <Image
+            src={image.src}
+            alt=""
+            fill
+            className="object-cover"
+            sizes="(max-width: 640px) 50vw, 50vw"
+            loading="lazy"
+            decoding="async"
+            quality={30} // モバイル: 極限まで低品質（30）
+            priority={false}
+            unoptimized={false}
+            placeholder="blur"
+            blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
+          />
         )}
       </div>
     </div>
@@ -123,7 +100,7 @@ export const ImageItem = memo(function ImageItem(props: ImageItemProps) {
   return (
     <Suspense fallback={
       <div
-        className="group relative overflow-hidden cursor-pointer rounded-xl opacity-0"
+        className="relative overflow-hidden cursor-pointer rounded-xl opacity-0"
         style={{
           aspectRatio: `${1 / props.image.aspectRatio}`,
         }}
@@ -140,10 +117,10 @@ export const ImageItem = memo(function ImageItem(props: ImageItemProps) {
     </Suspense>
   );
 }, (prevProps, nextProps) => {
-  // より厳密なメモ化比較
-  if (prevProps.image.id !== nextProps.image.id) return false;
-  if (prevProps.isMobile !== nextProps.isMobile) return false;
-  if (prevProps.columnIndex !== nextProps.columnIndex) return false;
-  if (prevProps.imageIndex !== nextProps.imageIndex) return false;
-  return true;
+  return (
+    prevProps.image.id === nextProps.image.id &&
+    prevProps.isMobile === nextProps.isMobile &&
+    prevProps.columnIndex === nextProps.columnIndex &&
+    prevProps.imageIndex === nextProps.imageIndex
+  );
 });

@@ -17,7 +17,7 @@ export const InfiniteScroll = memo(function InfiniteScroll({
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { 
     once: false, 
-    margin: '400px', // 400px手前でトリガー（より早く）
+    margin: '500px', // 500px手前でトリガー（より早く）
     amount: 0.1,
   });
 
@@ -35,8 +35,8 @@ export const InfiniteScroll = memo(function InfiniteScroll({
     const rect = ref.current.getBoundingClientRect();
     const windowHeight = window.innerHeight || document.documentElement.clientHeight;
     
-    // 要素が画面の下から500px以内に入ったら読み込む
-    if (rect.top <= windowHeight + 500 && rect.bottom >= -500) {
+    // 要素が画面の下から600px以内に入ったら読み込む
+    if (rect.top <= windowHeight + 600 && rect.bottom >= -600) {
       if (!loading) {
         onLoadMore();
       }
@@ -44,46 +44,40 @@ export const InfiniteScroll = memo(function InfiniteScroll({
   }, [hasMore, loading, onLoadMore]);
 
   useEffect(() => {
-    let animationFrameId: number;
+    let timeoutId: NodeJS.Timeout;
     let ticking = false;
 
     const throttledScroll = () => {
       if (!ticking) {
-        animationFrameId = requestAnimationFrame(() => {
+        timeoutId = setTimeout(() => {
           handleScroll();
           ticking = false;
-        });
+        }, 100); // 100ms間隔で実行
         ticking = true;
       }
     };
 
     window.addEventListener('scroll', throttledScroll, { passive: true });
-    throttledScroll(); // 初回チェック
+    throttledScroll();
 
     return () => {
       window.removeEventListener('scroll', throttledScroll);
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-      }
+      clearTimeout(timeoutId);
     };
   }, [handleScroll]);
 
   if (!hasMore) {
     return (
-      <div className="text-center py-12 text-gray-500">
+      <div className="text-center py-8 text-gray-500 text-sm">
         <p>すべての画像を表示しました</p>
       </div>
     );
   }
 
   return (
-    <div ref={ref} className="h-40 flex items-center justify-center py-8">
+    <div ref={ref} className="h-32 flex items-center justify-center py-6">
       {loading && (
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" />
-          <div className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-          <div className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-        </div>
+        <div className="w-6 h-6 border-2 border-primary-200 border-t-primary-500 rounded-full animate-spin" />
       )}
     </div>
   );

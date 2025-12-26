@@ -15,27 +15,10 @@ interface ImageWithAspect extends ImageData {
   aspectRatio: number;
 }
 
-// バーチャルスクロール: 表示範囲内の画像のみ計算
-function useVirtualScroll(
-  images: ImageWithAspect[],
-  isMobile: boolean,
-  viewportHeight: number,
-  displayedCount: number
-) {
-  return useMemo(() => {
-    if (isMobile) {
-      // モバイル: 表示されている画像のみ（バッファなし）
-      return images.slice(0, displayedCount);
-    }
-    // PC: 表示されている画像のみ
-    return images.slice(0, displayedCount);
-  }, [images, isMobile, displayedCount, viewportHeight]);
-}
-
 export const MasonryGrid = memo(function MasonryGrid({ 
   images, 
   onImageClick, 
-  itemsPerPage = 20 
+  itemsPerPage = 12 // モバイルではさらに少なく
 }: MasonryGridProps) {
   const [columns, setColumns] = useState(3);
   const [isMobile, setIsMobile] = useState(false);
@@ -43,7 +26,6 @@ export const MasonryGrid = memo(function MasonryGrid({
   const [isLoading, setIsLoading] = useState(true);
   const [displayedCount, setDisplayedCount] = useState(itemsPerPage);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [viewportHeight, setViewportHeight] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // レスポンシブな列数の設定（最適化：デバウンス）
@@ -55,7 +37,6 @@ export const MasonryGrid = memo(function MasonryGrid({
       timeoutId = setTimeout(() => {
         const width = window.innerWidth;
         setIsMobile(width < 640);
-        setViewportHeight(window.innerHeight);
         if (width < 640) {
           setColumns(2);
         } else if (width < 1024) {
@@ -63,7 +44,7 @@ export const MasonryGrid = memo(function MasonryGrid({
         } else {
           setColumns(3);
         }
-      }, 100);
+      }, 150);
     };
 
     updateColumns();
@@ -91,12 +72,9 @@ export const MasonryGrid = memo(function MasonryGrid({
   }, [images]);
 
   // バーチャルスクロール: 表示範囲内の画像のみ
-  const visibleImages = useVirtualScroll(
-    imagesWithAspect,
-    isMobile,
-    viewportHeight,
-    displayedCount
-  );
+  const visibleImages = useMemo(() => {
+    return imagesWithAspect.slice(0, displayedCount);
+  }, [imagesWithAspect, displayedCount]);
 
   // Masonry Layoutアルゴリズム（モバイルは2列の交互レイアウト）
   const columnsData = useMemo(() => {
@@ -133,16 +111,14 @@ export const MasonryGrid = memo(function MasonryGrid({
         const newCount = Math.min(displayedCount + itemsPerPage, imagesWithAspect.length);
         setDisplayedCount(newCount);
         setIsLoadingMore(false);
-      }, { timeout: 200 });
+      }, { timeout: 300 });
     } else {
-      // フォールバック: requestAnimationFrame
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          const newCount = Math.min(displayedCount + itemsPerPage, imagesWithAspect.length);
-          setDisplayedCount(newCount);
-          setIsLoadingMore(false);
-        }, 50);
-      });
+      // フォールバック: setTimeout（より軽量）
+      setTimeout(() => {
+        const newCount = Math.min(displayedCount + itemsPerPage, imagesWithAspect.length);
+        setDisplayedCount(newCount);
+        setIsLoadingMore(false);
+      }, 100);
     }
   }, [isLoadingMore, displayedCount, imagesWithAspect.length, itemsPerPage]);
 
@@ -150,14 +126,8 @@ export const MasonryGrid = memo(function MasonryGrid({
 
   if (isLoading && imagesWithAspect.length === 0) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative w-16 h-16">
-            <div className="absolute inset-0 border-4 border-primary-200 rounded-full" />
-            <div className="absolute inset-0 border-4 border-transparent border-t-primary-500 rounded-full animate-spin" />
-          </div>
-          <p className="text-gray-600">画像を読み込み中...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="w-8 h-8 border-2 border-primary-200 border-t-primary-500 rounded-full animate-spin" />
       </div>
     );
   }
