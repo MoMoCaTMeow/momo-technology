@@ -1,7 +1,7 @@
 'use client';
 
-import { useRef, useEffect, useState } from 'react';
-import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
+import { useRef, useEffect, useState, memo } from 'react';
+import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { type ImageData } from '@/lib/images';
 
@@ -15,7 +15,7 @@ interface ImageItemProps {
   onClick: () => void;
 }
 
-export function ImageItem({ 
+export const ImageItem = memo(function ImageItem({ 
   image, 
   index, 
   columns, 
@@ -33,21 +33,7 @@ export function ImageItem({
     ? (columnIndex === 0 ? (imageIndex % 2 === 0 ? -3 : 3) : (imageIndex % 2 === 0 ? 3 : -3))
     : 0;
 
-  // スクロールアニメーション（デスクトップのみ）
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ['start end', 'end start'],
-  });
-
-  const y = useTransform(scrollYProgress, [0, 1], [50, -50]);
-  const opacity = useTransform(scrollYProgress, [0, 0.3, 0.7, 1], [0, 1, 1, 0]);
-  const scale = useTransform(scrollYProgress, [0, 0.3, 0.7, 1], [0.9, 1, 1, 0.95]);
-
-  const smoothY = useSpring(y, { stiffness: 100, damping: 30 });
-  const smoothOpacity = useSpring(opacity, { stiffness: 100, damping: 30 });
-  const smoothScale = useSpring(scale, { stiffness: 100, damping: 30 });
-
-  // Intersection Observer
+  // Intersection Observer（最適化版：thresholdを緩和）
   useEffect(() => {
     const currentRef = ref.current;
     if (!currentRef) return;
@@ -58,7 +44,7 @@ export function ImageItem({
           setIsInView(true);
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.01 } // 0.1→0.01に変更（より早くトリガー）
     );
 
     observer.observe(currentRef);
@@ -71,20 +57,15 @@ export function ImageItem({
   return (
     <motion.div
       ref={ref}
-      style={{
-        y: isMobile ? 0 : smoothY,
-        opacity: isMobile ? 1 : smoothOpacity,
-        scale: isMobile ? 1 : smoothScale,
-      }}
-      initial={{ opacity: 0, y: isMobile ? 20 : 50, rotate: isMobile ? rotation : 0 }}
+      initial={{ opacity: 0, y: isMobile ? 10 : 20, rotate: isMobile ? rotation : 0 }}
       animate={{ 
         opacity: isInView ? 1 : 0, 
-        y: isInView ? 0 : (isMobile ? 20 : 50),
+        y: isInView ? 0 : (isMobile ? 10 : 20),
         rotate: isMobile ? rotation : 0,
       }}
       transition={{
-        duration: 0.5,
-        delay: isMobile ? imageIndex * 0.05 : (index % columns) * 0.1,
+        duration: 0.4, // 0.5→0.4に短縮
+        delay: isMobile ? imageIndex * 0.03 : (index % columns) * 0.05, // 遅延を短縮
         ease: [0.25, 0.46, 0.45, 0.94],
       }}
       className={`group relative overflow-hidden cursor-pointer ${
@@ -106,14 +87,14 @@ export function ImageItem({
           rotateY: isMobile ? 0 : (isHovered ? 2 : 0),
           rotateX: isMobile ? 0 : (isHovered ? -2 : 0),
         }}
-        transition={{ duration: 0.3, ease: 'easeOut' }}
+        transition={{ duration: 0.2, ease: 'easeOut' }} // 0.3→0.2に短縮
       >
         {/* Image */}
         <motion.div
           animate={{
             scale: isHovered ? (isMobile ? 1.05 : 1.1) : 1,
           }}
-          transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+          transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }} // 0.6→0.4に短縮
           className="relative w-full h-full"
         >
           <Image
@@ -123,6 +104,8 @@ export function ImageItem({
             className="object-cover"
             sizes={isMobile ? "(max-width: 640px) 50vw, 50vw" : "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"}
             loading="lazy"
+            decoding="async" // 非同期デコードを追加
+            quality={85} // 品質を少し下げてパフォーマンス向上
           />
         </motion.div>
 
@@ -131,7 +114,7 @@ export function ImageItem({
           className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-black/0"
           initial={{ opacity: 0 }}
           animate={{ opacity: isHovered ? 1 : 0 }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: 0.2 }} // 0.3→0.2に短縮
         />
 
         {/* Shine Effect (デスクトップのみ) */}
@@ -143,7 +126,7 @@ export function ImageItem({
               x: isHovered ? '100%' : '-100%',
             }}
             transition={{
-              duration: 0.8,
+              duration: 0.6, // 0.8→0.6に短縮
               ease: 'easeInOut',
             }}
           />
@@ -159,7 +142,7 @@ export function ImageItem({
             opacity: isHovered ? 1 : 0,
             y: isHovered ? 0 : 20,
           }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: 0.2 }} // 0.3→0.2に短縮
         >
           {!isMobile && (
             <>
@@ -200,10 +183,18 @@ export function ImageItem({
                 ? '0 0 30px rgba(14, 165, 233, 0.4)'
                 : '0 0 0px rgba(14, 165, 233, 0)',
             }}
-            transition={{ duration: 0.3 }}
+            transition={{ duration: 0.2 }} // 0.3→0.2に短縮
           />
         )}
       </motion.div>
     </motion.div>
   );
-}
+}, (prevProps, nextProps) => {
+  // メモ化の比較関数（パフォーマンス向上）
+  return (
+    prevProps.image.id === nextProps.image.id &&
+    prevProps.isMobile === nextProps.isMobile &&
+    prevProps.columnIndex === nextProps.columnIndex &&
+    prevProps.imageIndex === nextProps.imageIndex
+  );
+});

@@ -31,7 +31,7 @@ export function MasonryGrid({ images, onImageClick, itemsPerPage = 20 }: Masonry
       const width = window.innerWidth;
       setIsMobile(width < 640);
       if (width < 640) {
-        setColumns(2); // モバイルは2列
+        setColumns(2);
       } else if (width < 1024) {
         setColumns(2);
       } else {
@@ -44,78 +44,31 @@ export function MasonryGrid({ images, onImageClick, itemsPerPage = 20 }: Masonry
     return () => window.removeEventListener('resize', updateColumns);
   }, []);
 
-  // 画像のアスペクト比を取得（最適化版：先にデフォルト値で表示）
+  // 画像のアスペクト比を取得（最適化版：デフォルト値のみ使用）
   useEffect(() => {
     if (images.length === 0) return;
 
-    // まず、すべての画像をデフォルト値で即座に表示
+    // すべての画像をデフォルト値で即座に表示（サイズ取得をスキップ）
     const defaultImages: ImageWithAspect[] = images.map((image) => ({
       ...image,
       aspectRatio: image.width && image.height 
         ? image.height / image.width 
         : 4 / 3, // デフォルトアスペクト比
-      loaded: false,
+      loaded: true, // サイズ取得をスキップするため、loadedをtrueに
     }));
 
     setImagesWithAspect(defaultImages);
     setIsLoading(false);
 
-    // その後、バックグラウンドで実際のサイズを取得して更新
+    // バックグラウンドでのサイズ取得を完全にスキップ（パフォーマンス向上）
+    // 必要に応じて、表示されている画像のみサイズを取得する場合は以下を有効化
+    /*
     const updateImageDimensions = async () => {
-      const batchSize = 30;
-      
-      for (let i = 0; i < images.length; i += batchSize) {
-        const batch = images.slice(i, i + batchSize);
-        
-        await Promise.allSettled(
-          batch.map(async (image, batchIndex) => {
-            if (image.width && image.height) {
-              const globalIndex = i + batchIndex;
-              const aspectRatio = image.height / image.width;
-              setImagesWithAspect((prev) => {
-                const updated = [...prev];
-                if (updated[globalIndex]) {
-                  updated[globalIndex] = {
-                    ...updated[globalIndex],
-                    aspectRatio,
-                    loaded: true,
-                  };
-                }
-                return updated;
-              });
-              return;
-            }
-
-            try {
-              const { getImageDimensions } = await import('@/lib/images');
-              const dimensions = await getImageDimensions(image.src);
-              const aspectRatio = dimensions.height / dimensions.width;
-              const globalIndex = i + batchIndex;
-              
-              setImagesWithAspect((prev) => {
-                const updated = [...prev];
-                if (updated[globalIndex]) {
-                  updated[globalIndex] = {
-                    ...updated[globalIndex],
-                    aspectRatio,
-                    width: dimensions.width,
-                    height: dimensions.height,
-                    loaded: true,
-                  };
-                }
-                return updated;
-              });
-            } catch (error) {
-              console.warn(`Failed to load dimensions for ${image.src}`);
-            }
-          })
-        );
-
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      }
+      // 表示されている画像のみサイズを取得
+      const visibleImages = images.slice(0, displayedCount);
+      // ... サイズ取得処理
     };
-
-    updateImageDimensions();
+    */
   }, [images]);
 
   // Masonry Layoutアルゴリズム（モバイルは2列の交互レイアウト）
@@ -124,7 +77,6 @@ export function MasonryGrid({ images, onImageClick, itemsPerPage = 20 }: Masonry
     if (displayedImages.length === 0) return [];
 
     if (isMobile) {
-      // モバイル: 2列の交互レイアウト
       const cols: ImageWithAspect[][] = [[], []];
       displayedImages.forEach((image, index) => {
         cols[index % 2].push(image);
@@ -132,7 +84,6 @@ export function MasonryGrid({ images, onImageClick, itemsPerPage = 20 }: Masonry
       return cols;
     }
 
-    // デスクトップ: 通常のMasonry Layout
     const cols: ImageWithAspect[][] = Array.from({ length: columns }, () => []);
     const heights = Array(columns).fill(0);
 
@@ -147,30 +98,13 @@ export function MasonryGrid({ images, onImageClick, itemsPerPage = 20 }: Masonry
 
   // 無限スクロール用のコールバック（メモ化）
   const handleLoadMore = useCallback(() => {
-    if (isLoadingMore) {
-      console.log('Already loading, skipping...');
-      return;
-    }
-    
-    if (displayedCount >= imagesWithAspect.length) {
-      console.log('All images displayed', { displayedCount, total: imagesWithAspect.length });
-      return;
-    }
-    
-    console.log('Loading more...', { 
-      current: displayedCount, 
-      total: imagesWithAspect.length,
-      willLoad: Math.min(displayedCount + itemsPerPage, imagesWithAspect.length)
-    });
+    if (isLoadingMore || displayedCount >= imagesWithAspect.length) return;
     
     setIsLoadingMore(true);
-    
-    // 少し遅延を入れて、スムーズに表示
     setTimeout(() => {
       const newCount = Math.min(displayedCount + itemsPerPage, imagesWithAspect.length);
       setDisplayedCount(newCount);
       setIsLoadingMore(false);
-      console.log('Loaded more images', { newCount });
     }, 200);
   }, [isLoadingMore, displayedCount, imagesWithAspect.length, itemsPerPage]);
 

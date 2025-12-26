@@ -1,14 +1,19 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 
 export function FluidBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isReducedMotion, setIsReducedMotion] = useState(false);
 
   useEffect(() => {
+    // モーション削減設定を確認
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    setIsReducedMotion(prefersReducedMotion);
+
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || prefersReducedMotion) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -21,7 +26,7 @@ export function FluidBackground() {
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 
-    // 流体アニメーションの設定
+    // 流体アニメーションの設定（最適化版）
     const particles: Array<{
       x: number;
       y: number;
@@ -30,34 +35,41 @@ export function FluidBackground() {
       radius: number;
     }> = [];
 
-    // パーティクルの生成
-    const particleCount = 50;
+    // パーティクル数を削減（50→20）
+    const particleCount = 20;
     for (let i = 0; i < particleCount; i++) {
       particles.push({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.5,
-        vy: (Math.random() - 0.5) * 0.5,
-        radius: Math.random() * 100 + 50,
+        vx: (Math.random() - 0.5) * 0.3, // 速度を下げる
+        vy: (Math.random() - 0.5) * 0.3,
+        radius: Math.random() * 80 + 40, // 半径を小さく
       });
     }
 
-    // アニメーションループ
+    // アニメーションループ（フレームレート制限）
     let animationId: number;
-    const animate = () => {
+    let lastTime = 0;
+    const targetFPS = 30; // 60fps→30fps
+    const frameInterval = 1000 / targetFPS;
+
+    const animate = (currentTime: number) => {
+      if (currentTime - lastTime < frameInterval) {
+        animationId = requestAnimationFrame(animate);
+        return;
+      }
+      lastTime = currentTime;
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       // パーティクルの更新と描画
       particles.forEach((particle, i) => {
-        // 位置の更新
         particle.x += particle.vx;
         particle.y += particle.vy;
 
-        // 境界で跳ね返り
         if (particle.x < 0 || particle.x > canvas.width) particle.vx *= -1;
         if (particle.y < 0 || particle.y > canvas.height) particle.vy *= -1;
 
-        // 位置を範囲内に保つ
         particle.x = Math.max(0, Math.min(canvas.width, particle.x));
         particle.y = Math.max(0, Math.min(canvas.height, particle.y));
 
@@ -70,8 +82,8 @@ export function FluidBackground() {
           particle.y,
           particle.radius
         );
-        gradient.addColorStop(0, 'rgba(255, 252, 248, 0.4)'); // オフホワイト
-        gradient.addColorStop(0.5, 'rgba(250, 248, 245, 0.2)');
+        gradient.addColorStop(0, 'rgba(255, 252, 248, 0.3)'); // 透明度を下げる
+        gradient.addColorStop(0.5, 'rgba(250, 248, 245, 0.15)');
         gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
 
         ctx.fillStyle = gradient;
@@ -79,15 +91,15 @@ export function FluidBackground() {
         ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
         ctx.fill();
 
-        // パーティクル間の接続線
+        // 接続線の描画を簡略化（距離チェックを緩和）
         particles.slice(i + 1).forEach((otherParticle) => {
           const dx = particle.x - otherParticle.x;
           const dy = particle.y - otherParticle.y;
           const distance = Math.sqrt(dx * dx + dy * dy);
 
-          if (distance < 150) {
-            ctx.strokeStyle = `rgba(250, 248, 245, ${0.2 * (1 - distance / 150)})`;
-            ctx.lineWidth = 1;
+          if (distance < 120) { // 距離を短く
+            ctx.strokeStyle = `rgba(250, 248, 245, ${0.15 * (1 - distance / 120)})`;
+            ctx.lineWidth = 0.5; // 線を細く
             ctx.beginPath();
             ctx.moveTo(particle.x, particle.y);
             ctx.lineTo(otherParticle.x, otherParticle.y);
@@ -99,7 +111,7 @@ export function FluidBackground() {
       animationId = requestAnimationFrame(animate);
     };
 
-    animate();
+    animationId = requestAnimationFrame(animate);
 
     return () => {
       window.removeEventListener('resize', resizeCanvas);
@@ -107,12 +119,21 @@ export function FluidBackground() {
     };
   }, []);
 
+  // モーション削減設定の場合は静的な背景のみ
+  if (isReducedMotion) {
+    return (
+      <div
+        className="fixed inset-0 pointer-events-none z-0"
+        style={{ background: '#FEFCFB' }}
+      />
+    );
+  }
+
   return (
     <canvas
       ref={canvasRef}
       className="fixed inset-0 pointer-events-none z-0"
-      style={{ background: '#FEFCFB' }} // オフホワイト背景
+      style={{ background: '#FEFCFB' }}
     />
   );
 }
-

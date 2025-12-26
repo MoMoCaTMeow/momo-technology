@@ -11,41 +11,49 @@ interface InfiniteScrollProps {
 
 export function InfiniteScroll({ onLoadMore, hasMore, loading }: InfiniteScrollProps) {
   const ref = useRef<HTMLDivElement>(null);
-  // マージンを大きくして、より早くトリガーされるようにする
   const isInView = useInView(ref, { 
     once: false, 
-    margin: '200px', // 200px手前でトリガー
-    amount: 0.1, // 10%が見えたらトリガー
+    margin: '200px',
+    amount: 0.1,
   });
 
   useEffect(() => {
     if (isInView && hasMore && !loading) {
-      console.log('Loading more images...', { isInView, hasMore, loading });
       onLoadMore();
     }
   }, [isInView, hasMore, loading, onLoadMore]);
 
-  // スクロールイベントリスナーも追加（フォールバック）
+  // スクロールイベントリスナー（最適化版：throttle追加）
   useEffect(() => {
     if (!hasMore || loading) return;
 
+    let ticking = false;
+
     const handleScroll = () => {
-      if (!ref.current) return;
-      
-      const rect = ref.current.getBoundingClientRect();
-      const windowHeight = window.innerHeight || document.documentElement.clientHeight;
-      
-      // 要素が画面の下から300px以内に入ったら読み込む
-      if (rect.top <= windowHeight + 300 && rect.bottom >= -300) {
-        if (!loading) {
-          console.log('Scroll trigger: Loading more images...');
-          onLoadMore();
-        }
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          if (!ref.current) {
+            ticking = false;
+            return;
+          }
+          
+          const rect = ref.current.getBoundingClientRect();
+          const windowHeight = window.innerHeight || document.documentElement.clientHeight;
+          
+          if (rect.top <= windowHeight + 300 && rect.bottom >= -300) {
+            if (!loading) {
+              onLoadMore();
+            }
+          }
+          
+          ticking = false;
+        });
+        ticking = true;
       }
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll(); // 初回チェック
+    handleScroll();
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
