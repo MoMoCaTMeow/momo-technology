@@ -12,7 +12,7 @@ git status
 git add -A
 
 # コミット
-git commit -m "feat: Update gallery website with fluid background"
+git commit -m "feat: Fix package-lock.json and update gallery"
 
 # GitHubにプッシュ
 git push origin main
@@ -24,25 +24,20 @@ git push origin main
    - https://dash.cloudflare.com にアクセス
    - アカウントにログイン
 
-2. **Workers & Pagesに移動**
+2. **既存のプロジェクトを編集**
    - 左サイドバーから「Workers & Pages」を選択
-   - 「Create application」→「Pages」→「Connect to Git」
+   - `momo-technology` プロジェクトを選択
+   - 「Settings」タブを開く
+   - 「Builds & deployments」セクションを開く
 
-3. **GitHubリポジトリを接続**
-   - GitHubアカウントを認証
-   - リポジトリ `MoMoCaTMeow/momo-technology` を選択
-   - 「Begin setup」をクリック
-
-4. **ビルド設定を入力**
-
-   **Project name**: `momo-technology`（任意）
-
-   **Production branch**: `main`
+3. **ビルド設定を更新**
 
    **Build command**:
    ```
    npm install --legacy-peer-deps && npm run build
    ```
+   
+   **重要**: Cloudflare Pagesはデフォルトで`npm ci`を使用しますが、依存関係の不一致を避けるため、上記のコマンドを**必ず**設定してください。
 
    **Build output directory**:
    ```
@@ -51,11 +46,11 @@ git push origin main
 
    **Root directory**: （空白のまま）
 
-   **Environment variables**: （不要）
+   **Node version**: `18`（`.nvmrc`で指定済み）
 
-5. **保存してデプロイ**
-   - 「Save and Deploy」をクリック
-   - ビルドが開始されます（数分かかります）
+4. **保存**
+   - 「Save」をクリック
+   - 自動的に新しいビルドが開始されます
 
 ### 3. カスタムドメインの設定（オプション）
 
@@ -68,7 +63,7 @@ git push origin main
    - CloudflareでDNSレコードを追加:
      - Type: `CNAME`
      - Name: `@` または `www`
-     - Target: `プロジェクト名.pages.dev`
+     - Target: `momo-technology.pages.dev`（プロジェクト名に応じて変更）
      - Proxy: ON（推奨）
 
 3. **SSL/TLS設定**
@@ -79,21 +74,35 @@ git push origin main
 
 ### ビルドが失敗する場合
 
-1. **ビルドログを確認**
-   - Cloudflare Pagesの「Deployments」タブ
-   - 失敗したデプロイをクリック
-   - 「View build log」でエラーを確認
+#### エラー: `npm ci` failed / package-lock.json out of sync
 
-2. **よくあるエラーと解決方法**
+**原因**: `package-lock.json`と`package.json`が同期していない
 
-   **エラー**: `Build output directory not found`
-   - **解決**: Build output directoryを `out` に設定
+**解決方法**:
+1. ローカルで`package-lock.json`を再生成:
+   ```bash
+   rm package-lock.json
+   npm install --legacy-peer-deps
+   git add package-lock.json
+   git commit -m "fix: Update package-lock.json"
+   git push origin main
+   ```
 
-   **エラー**: `npm install failed`
-   - **解決**: Build commandに `--legacy-peer-deps` を追加
+2. Cloudflare Pagesのビルドコマンドを確認:
+   - Build commandが `npm install --legacy-peer-deps && npm run build` になっているか確認
+   - `npm ci`ではなく`npm install`を使用する必要があります
 
-   **エラー**: `Node version mismatch`
-   - **解決**: `.nvmrc` ファイルでNode.js 18を指定済み
+#### エラー: `Build output directory not found`
+
+**解決**: Build output directoryを `out` に設定
+
+#### エラー: `npm install failed`
+
+**解決**: Build commandに `--legacy-peer-deps` を追加
+
+#### エラー: `Node version mismatch`
+
+**解決**: `.nvmrc` ファイルでNode.js 18を指定済み
 
 ### 画像が表示されない場合
 
@@ -110,6 +119,7 @@ git push origin main
 - **Build output**: Static Export (`out/`)
 - **Node version**: 18 (`.nvmrc`で指定)
 - **画像数**: 747枚（自動検出）
+- **Build command**: `npm install --legacy-peer-deps && npm run build`
 
 ## 🚀 デプロイ後の確認
 
@@ -133,3 +143,13 @@ git push origin main
 
 Cloudflare Pagesが自動的に新しいビルドを開始します。
 
+## ⚠️ 重要な注意事項
+
+Cloudflare Pagesはデフォルトで`npm ci`を使用しますが、このプロジェクトでは`npm install --legacy-peer-deps`を使用する必要があります。
+
+**必ず**Cloudflare Pagesの設定で、Build commandを以下に設定してください:
+```
+npm install --legacy-peer-deps && npm run build
+```
+
+これを設定しないと、`package-lock.json`の不一致エラーが発生します。
