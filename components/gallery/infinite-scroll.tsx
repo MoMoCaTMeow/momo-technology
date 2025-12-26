@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useInView } from 'framer-motion';
 
 interface InfiniteScrollProps {
@@ -13,52 +13,56 @@ export function InfiniteScroll({ onLoadMore, hasMore, loading }: InfiniteScrollP
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { 
     once: false, 
-    margin: '200px',
+    margin: '300px', // 300px手前でトリガー（より早く）
     amount: 0.1,
   });
 
+  // Intersection Observerによるトリガー
   useEffect(() => {
     if (isInView && hasMore && !loading) {
       onLoadMore();
     }
   }, [isInView, hasMore, loading, onLoadMore]);
 
-  // スクロールイベントリスナー（最適化版：throttle追加）
-  useEffect(() => {
-    if (!hasMore || loading) return;
+  // スクロールイベントリスナーによるフォールバック（requestAnimationFrameで最適化）
+  const handleScroll = useCallback(() => {
+    if (!hasMore || loading || !ref.current) return;
+    
+    const rect = ref.current.getBoundingClientRect();
+    const windowHeight = window.innerHeight || document.documentElement.clientHeight;
+    
+    // 要素が画面の下から400px以内に入ったら読み込む
+    if (rect.top <= windowHeight + 400 && rect.bottom >= -400) {
+      if (!loading) {
+        onLoadMore();
+      }
+    }
+  }, [hasMore, loading, onLoadMore]);
 
+  useEffect(() => {
+    let animationFrameId: number;
     let ticking = false;
 
-    const handleScroll = () => {
+    const throttledScroll = () => {
       if (!ticking) {
-        window.requestAnimationFrame(() => {
-          if (!ref.current) {
-            ticking = false;
-            return;
-          }
-          
-          const rect = ref.current.getBoundingClientRect();
-          const windowHeight = window.innerHeight || document.documentElement.clientHeight;
-          
-          if (rect.top <= windowHeight + 300 && rect.bottom >= -300) {
-            if (!loading) {
-              onLoadMore();
-            }
-          }
-          
+        animationFrameId = requestAnimationFrame(() => {
+          handleScroll();
           ticking = false;
         });
         ticking = true;
       }
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
+    window.addEventListener('scroll', throttledScroll, { passive: true });
+    throttledScroll(); // 初回チェック
 
     return () => {
-      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', throttledScroll);
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
     };
-  }, [hasMore, loading, onLoadMore]);
+  }, [handleScroll]);
 
   if (!hasMore) {
     return (

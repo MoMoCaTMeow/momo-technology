@@ -21,6 +21,19 @@
   }
 }
 
+/* モバイル向けのパフォーマンス最適化 */
+@media (max-width: 640px) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* GPUアクセラレーション */
+.gpu-accelerated {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
 @layer utilities {
   /* Custom scrollbar */
   ::-webkit-scrollbar {
