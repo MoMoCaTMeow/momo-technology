@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, memo } from 'react';
 import { useInView } from 'framer-motion';
 
 interface InfiniteScrollProps {
@@ -9,11 +9,15 @@ interface InfiniteScrollProps {
   loading: boolean;
 }
 
-export function InfiniteScroll({ onLoadMore, hasMore, loading }: InfiniteScrollProps) {
+export const InfiniteScroll = memo(function InfiniteScroll({ 
+  onLoadMore, 
+  hasMore, 
+  loading 
+}: InfiniteScrollProps) {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { 
     once: false, 
-    margin: '300px', // 300px手前でトリガー（より早く）
+    margin: '400px', // 400px手前でトリガー（より早く）
     amount: 0.1,
   });
 
@@ -24,15 +28,15 @@ export function InfiniteScroll({ onLoadMore, hasMore, loading }: InfiniteScrollP
     }
   }, [isInView, hasMore, loading, onLoadMore]);
 
-  // スクロールイベントリスナーによるフォールバック（requestAnimationFrameで最適化）
+  // スクロールイベントリスナーによるフォールバック（最適化版）
   const handleScroll = useCallback(() => {
     if (!hasMore || loading || !ref.current) return;
     
     const rect = ref.current.getBoundingClientRect();
     const windowHeight = window.innerHeight || document.documentElement.clientHeight;
     
-    // 要素が画面の下から400px以内に入ったら読み込む
-    if (rect.top <= windowHeight + 400 && rect.bottom >= -400) {
+    // 要素が画面の下から500px以内に入ったら読み込む
+    if (rect.top <= windowHeight + 500 && rect.bottom >= -500) {
       if (!loading) {
         onLoadMore();
       }
@@ -83,4 +87,4 @@ export function InfiniteScroll({ onLoadMore, hasMore, loading }: InfiniteScrollP
       )}
     </div>
   );
-}
+});

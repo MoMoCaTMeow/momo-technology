@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, lazy, Suspense } from 'react';
+import { useState, lazy, Suspense, memo } from 'react';
 import { MasonryGrid } from '@/components/gallery/masonry-grid';
 import { HeroSection } from '@/components/gallery/hero-section';
 import { FilterBar } from '@/components/gallery/filter-bar';
@@ -10,7 +10,7 @@ import { images } from '@/lib/images';
 // Lightboxを動的インポート（遅延読み込み）
 const Lightbox = lazy(() => import('@/components/gallery/lightbox').then(mod => ({ default: mod.Lightbox })));
 
-export default function HomePage() {
+function HomePage() {
   const [lightboxIndex, setLightboxIndex] = useState(-1);
   const [filteredImages, setFilteredImages] = useState(images);
   const isLightboxOpen = lightboxIndex >= 0;
@@ -83,3 +83,5 @@ export default function HomePage() {
     </main>
   );
 }
+
+export default memo(HomePage);

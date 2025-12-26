@@ -13,7 +13,7 @@ export function FluidBackground() {
       setIsMobile(window.innerWidth < 640);
     };
     checkMobile();
-    window.addEventListener('resize', checkMobile);
+    window.addEventListener('resize', checkMobile, { passive: true });
 
     // モーション削減設定を確認
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -25,7 +25,7 @@ export function FluidBackground() {
       return () => window.removeEventListener('resize', checkMobile);
     }
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false }); // アルファチャンネル無効化でパフォーマンス向上
     if (!ctx) {
       return () => window.removeEventListener('resize', checkMobile);
     }
@@ -36,9 +36,9 @@ export function FluidBackground() {
       canvas.height = window.innerHeight;
     };
     resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('resize', resizeCanvas, { passive: true });
 
-    // 流体アニメーションの設定（最適化版）
+    // 流体アニメーションの設定（最適化版：パーティクル数をさらに削減）
     const particles: Array<{
       x: number;
       y: number;
@@ -47,22 +47,22 @@ export function FluidBackground() {
       radius: number;
     }> = [];
 
-    // パーティクル数を削減（20）
-    const particleCount = 20;
+    // パーティクル数を削減（20→10）
+    const particleCount = 10;
     for (let i = 0; i < particleCount; i++) {
       particles.push({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.3,
-        radius: Math.random() * 80 + 40,
+        vx: (Math.random() - 0.5) * 0.2, // 速度をさらに下げる
+        vy: (Math.random() - 0.5) * 0.2,
+        radius: Math.random() * 60 + 30, // 半径をさらに小さく
       });
     }
 
     // アニメーションループ（フレームレート制限）
     let animationId: number;
     let lastTime = 0;
-    const targetFPS = 30;
+    const targetFPS = 20; // 30fps→20fps
     const frameInterval = 1000 / targetFPS;
 
     const animate = (currentTime: number) => {
@@ -92,8 +92,8 @@ export function FluidBackground() {
           particle.y,
           particle.radius
         );
-        gradient.addColorStop(0, 'rgba(255, 252, 248, 0.3)');
-        gradient.addColorStop(0.5, 'rgba(250, 248, 245, 0.15)');
+        gradient.addColorStop(0, 'rgba(255, 252, 248, 0.2)'); // 透明度をさらに下げる
+        gradient.addColorStop(0.5, 'rgba(250, 248, 245, 0.1)');
         gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
 
         ctx.fillStyle = gradient;
@@ -101,20 +101,23 @@ export function FluidBackground() {
         ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
         ctx.fill();
 
-        particles.slice(i + 1).forEach((otherParticle) => {
-          const dx = particle.x - otherParticle.x;
-          const dy = particle.y - otherParticle.y;
-          const distance = Math.sqrt(dx * dx + dy * dy);
+        // 接続線の描画を簡略化（距離チェックを緩和、描画回数を削減）
+        if (i % 2 === 0) { // 偶数インデックスのみ接続線を描画
+          particles.slice(i + 1).forEach((otherParticle) => {
+            const dx = particle.x - otherParticle.x;
+            const dy = particle.y - otherParticle.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
 
-          if (distance < 120) {
-            ctx.strokeStyle = `rgba(250, 248, 245, ${0.15 * (1 - distance / 120)})`;
-            ctx.lineWidth = 0.5;
-            ctx.beginPath();
-            ctx.moveTo(particle.x, particle.y);
-            ctx.lineTo(otherParticle.x, otherParticle.y);
-            ctx.stroke();
-          }
-        });
+            if (distance < 100) { // 距離をさらに短く
+              ctx.strokeStyle = `rgba(250, 248, 245, ${0.1 * (1 - distance / 100)})`;
+              ctx.lineWidth = 0.3; // 線をさらに細く
+              ctx.beginPath();
+              ctx.moveTo(particle.x, particle.y);
+              ctx.lineTo(otherParticle.x, otherParticle.y);
+              ctx.stroke();
+            }
+          });
+        }
       });
 
       animationId = requestAnimationFrame(animate);

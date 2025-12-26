@@ -14,91 +14,99 @@ interface ImageItemProps {
   onClick: () => void;
 }
 
-// モバイル用の超軽量コンポーネント（Framer Motion完全不使用）
-function MobileImageItem({ 
+// モバイル用の超軽量コンポーネント（Framer Motion完全不使用、最小限の処理）
+const MobileImageItem = memo(function MobileImageItem({ 
   image, 
   columnIndex = 0,
   imageIndex = 0,
   onClick 
 }: Omit<ImageItemProps, 'index' | 'columns'>) {
   const ref = useRef<HTMLDivElement>(null);
-  const [isInView, setIsInView] = useState(false);
+  const [shouldLoad, setShouldLoad] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // モバイル: 交互に斜めに回転
+  // モバイル: 交互に斜めに回転（CSS変数で管理）
   const rotation = columnIndex === 0 
     ? (imageIndex % 2 === 0 ? -3 : 3) 
     : (imageIndex % 2 === 0 ? 3 : -3);
 
-  // Intersection Observer（最適化版：より早くトリガー）
+  // Intersection Observer（最適化版：より早くトリガー、シンプルに）
   useEffect(() => {
     const currentRef = ref.current;
-    if (!currentRef) return;
+    if (!currentRef || shouldLoad) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setIsInView(true);
-          // 画像の読み込みを開始
-          const img = new window.Image();
-          img.onload = () => setIsLoaded(true);
-          img.src = image.src;
+          setShouldLoad(true);
+          observer.disconnect(); // 一度トリガーしたら切断
         }
       },
       { 
         threshold: 0,
-        rootMargin: '100px' // 100px手前で読み込み開始
+        rootMargin: '150px' // 150px手前で読み込み開始（より早く）
       }
     );
 
     observer.observe(currentRef);
 
     return () => {
-      observer.unobserve(currentRef);
+      observer.disconnect();
     };
-  }, [image.src]);
+  }, [shouldLoad]);
+
+  // 画像の読み込み完了を検知
+  useEffect(() => {
+    if (!shouldLoad) return;
+    
+    const img = new window.Image();
+    img.onload = () => setIsLoaded(true);
+    img.onerror = () => setIsLoaded(true); // エラーでも表示
+    img.src = image.src;
+  }, [shouldLoad, image.src]);
 
   return (
     <div
       ref={ref}
-      className={`group relative overflow-hidden cursor-pointer rounded-lg transition-opacity duration-200 ${
-        isInView ? 'opacity-100' : 'opacity-0'
-      }`}
+      className="group relative overflow-hidden cursor-pointer rounded-lg"
       style={{
         transform: `rotate(${rotation}deg)`,
-        willChange: 'transform, opacity',
+        aspectRatio: `${1 / image.aspectRatio}`,
+        opacity: shouldLoad ? 1 : 0,
+        transition: 'opacity 0.2s ease-out',
       }}
       onClick={onClick}
     >
-      <div
-        className="relative w-full overflow-hidden bg-gray-100 rounded-lg"
-        style={{
-          aspectRatio: `${1 / image.aspectRatio}`,
-        }}
-      >
-        {isInView && (
-          <Image
-            src={image.src}
-            alt={image.alt}
-            fill
-            className={`object-cover transition-opacity duration-300 ${
-              isLoaded ? 'opacity-100' : 'opacity-0'
-            }`}
-            sizes="(max-width: 640px) 50vw, 50vw"
-            loading="lazy"
-            decoding="async"
-            quality={50} // モバイル: さらに低品質（50）
-            priority={false}
-          />
-        )}
-        {/* プレースホルダー */}
-        {!isLoaded && isInView && (
-          <div className="absolute inset-0 bg-gray-200 animate-pulse" />
+      <div className="relative w-full h-full overflow-hidden bg-gray-100 rounded-lg">
+        {shouldLoad && (
+          <>
+            <Image
+              src={image.src}
+              alt={image.alt}
+              fill
+              className={`object-cover ${
+                isLoaded ? 'opacity-100' : 'opacity-0'
+              }`}
+              style={{
+                transition: 'opacity 0.3s ease-out',
+              }}
+              sizes="(max-width: 640px) 50vw, 50vw"
+              loading="lazy"
+              decoding="async"
+              quality={40} // モバイル: さらに低品質（40）
+              priority={false}
+              unoptimized={false}
+            />
+            {/* プレースホルダー（シンプル） */}
+            {!isLoaded && (
+              <div className="absolute inset-0 bg-gray-200" />
+            )}
+          </>
         )}
       </div>
     </div>
   );
-}
+});
 
 import { lazy, Suspense } from 'react';
 
@@ -132,10 +140,10 @@ export const ImageItem = memo(function ImageItem(props: ImageItemProps) {
     </Suspense>
   );
 }, (prevProps, nextProps) => {
-  return (
-    prevProps.image.id === nextProps.image.id &&
-    prevProps.isMobile === nextProps.isMobile &&
-    prevProps.columnIndex === nextProps.columnIndex &&
-    prevProps.imageIndex === nextProps.imageIndex
-  );
+  // より厳密なメモ化比較
+  if (prevProps.image.id !== nextProps.image.id) return false;
+  if (prevProps.isMobile !== nextProps.isMobile) return false;
+  if (prevProps.columnIndex !== nextProps.columnIndex) return false;
+  if (prevProps.imageIndex !== nextProps.imageIndex) return false;
+  return true;
 });
