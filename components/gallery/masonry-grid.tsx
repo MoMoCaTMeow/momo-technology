@@ -147,13 +147,31 @@ export function MasonryGrid({ images, onImageClick, itemsPerPage = 20 }: Masonry
 
   // 無限スクロール用のコールバック（メモ化）
   const handleLoadMore = useCallback(() => {
-    if (isLoadingMore || displayedCount >= imagesWithAspect.length) return;
+    if (isLoadingMore) {
+      console.log('Already loading, skipping...');
+      return;
+    }
+    
+    if (displayedCount >= imagesWithAspect.length) {
+      console.log('All images displayed', { displayedCount, total: imagesWithAspect.length });
+      return;
+    }
+    
+    console.log('Loading more...', { 
+      current: displayedCount, 
+      total: imagesWithAspect.length,
+      willLoad: Math.min(displayedCount + itemsPerPage, imagesWithAspect.length)
+    });
     
     setIsLoadingMore(true);
+    
+    // 少し遅延を入れて、スムーズに表示
     setTimeout(() => {
-      setDisplayedCount((prev) => Math.min(prev + itemsPerPage, imagesWithAspect.length));
+      const newCount = Math.min(displayedCount + itemsPerPage, imagesWithAspect.length);
+      setDisplayedCount(newCount);
       setIsLoadingMore(false);
-    }, 300);
+      console.log('Loaded more images', { newCount });
+    }, 200);
   }, [isLoadingMore, displayedCount, imagesWithAspect.length, itemsPerPage]);
 
   const hasMore = displayedCount < imagesWithAspect.length;
