@@ -1,6 +1,7 @@
 import type { Config } from 'tailwindcss';
 
 const config: Config = {
+  darkMode: 'class',
   content: [
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -9,82 +10,91 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Primary Color Palette: Green (#006837) for AIU Cedar Society
+        // Premium color palette
         primary: {
-          50: '#E6F5ED',
-          100: '#CCEBDC',
-          200: '#99D7B9',
-          300: '#66C396',
-          400: '#33AF73',
-          500: '#006837', // Primary Green
-          600: '#00532C',
-          700: '#003E21',
-          800: '#002916',
-          900: '#00140B',
+          50: '#F0F9FF',
+          100: '#E0F2FE',
+          200: '#BAE6FD',
+          300: '#7DD3FC',
+          400: '#38BDF8',
+          500: '#0EA5E9',
+          600: '#0284C7',
+          700: '#0369A1',
+          800: '#075985',
+          900: '#0C4A6E',
         },
-        // Warm background colors
-        warm: {
-          50: '#FEF9F4',
-          100: '#FAF7F2',
-          200: '#F5F2ED',
-          300: '#F0EDE8',
-          400: '#EBE8E3',
-          500: '#E6E3DE',
+        dark: {
+          50: '#18181B',
+          100: '#27272A',
+          200: '#3F3F46',
+          300: '#52525B',
+          400: '#71717A',
+          500: '#A1A1AA',
+          600: '#D4D4D8',
+          700: '#E4E4E7',
+          800: '#F4F4F5',
+          900: '#FAFAFA',
         },
       },
       fontFamily: {
-        sans: [
-          'var(--font-geist-sans)',
-          'var(--font-noto-sans-jp)',
-          'system-ui',
-          'sans-serif',
-        ],
-        display: [
-          'var(--font-geist-sans)',
-          'Inter',
-          'system-ui',
-          'sans-serif',
-        ],
-        jp: ['var(--font-noto-sans-jp)', 'Noto Sans JP', 'sans-serif'],
-        // Zen Old Mincho for Japanese (optional)
-        serif: ['var(--font-zen-old-mincho)', 'serif'],
-      },
-      fontSize: {
-        // Fluid Typography
-        xs: ['clamp(0.75rem, 1.5vw, 0.875rem)', { lineHeight: '1.5' }],
-        sm: ['clamp(0.875rem, 1.8vw, 1rem)', { lineHeight: '1.6' }],
-        base: ['clamp(1rem, 2vw, 1.125rem)', { lineHeight: '1.7' }],
-        lg: ['clamp(1.125rem, 2.5vw, 1.25rem)', { lineHeight: '1.7' }],
-        xl: ['clamp(1.25rem, 3vw, 1.5rem)', { lineHeight: '1.6' }],
-        '2xl': ['clamp(1.5rem, 4vw, 2rem)', { lineHeight: '1.5' }],
-        '3xl': ['clamp(2rem, 5vw, 3rem)', { lineHeight: '1.4' }],
-        '4xl': ['clamp(2.5rem, 7vw, 4.5rem)', { lineHeight: '1.3' }],
-        '5xl': ['clamp(3rem, 10vw, 6rem)', { lineHeight: '1.2' }],
-      },
-      backgroundImage: {
-        'mesh-gradient': 'radial-gradient(at 0% 0%, rgba(0, 104, 55, 0.15) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(0, 104, 55, 0.1) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(0, 104, 55, 0.08) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(0, 104, 55, 0.12) 0px, transparent 50%)',
-        'warm-gradient': 'linear-gradient(135deg, #fef9f4 0%, #faf7f2 25%, #f5f2ed 50%, #f0ede8 75%, #fef9f4 100%)',
-      },
-      backdropBlur: {
-        xs: '2px',
-      },
-      borderRadius: {
-        '4xl': '2rem',
-        '5xl': '2.5rem',
+        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-inter)', 'system-ui', 'sans-serif'],
       },
       animation: {
-        'fade-in-up': 'fadeInUp 0.6s ease-out',
         'fade-in': 'fadeIn 0.6s ease-out',
+        'fade-in-up': 'fadeInUp 0.8s ease-out',
+        'fade-in-down': 'fadeInDown 0.8s ease-out',
+        'scale-in': 'scaleIn 0.4s ease-out',
+        'slide-up': 'slideUp 0.6s ease-out',
+        'slide-down': 'slideDown 0.6s ease-out',
+        'float': 'float 6s ease-in-out infinite',
+        'glow': 'glow 2s ease-in-out infinite alternate',
+        'shimmer': 'shimmer 2s linear infinite',
       },
       keyframes: {
-        fadeInUp: {
-          '0%': { opacity: '0', transform: 'translateY(20px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
-        },
         fadeIn: {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },
         },
+        fadeInUp: {
+          '0%': { opacity: '0', transform: 'translateY(30px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        fadeInDown: {
+          '0%': { opacity: '0', transform: 'translateY(-30px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        scaleIn: {
+          '0%': { opacity: '0', transform: 'scale(0.9)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        slideUp: {
+          '0%': { transform: 'translateY(100%)' },
+          '100%': { transform: 'translateY(0)' },
+        },
+        slideDown: {
+          '0%': { transform: 'translateY(-100%)' },
+          '100%': { transform: 'translateY(0)' },
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-20px)' },
+        },
+        glow: {
+          '0%': { boxShadow: '0 0 5px rgba(14, 165, 233, 0.5)' },
+          '100%': { boxShadow: '0 0 20px rgba(14, 165, 233, 0.8)' },
+        },
+        shimmer: {
+          '0%': { backgroundPosition: '-1000px 0' },
+          '100%': { backgroundPosition: '1000px 0' },
+        },
+      },
+      backdropBlur: {
+        xs: '2px',
+      },
+      boxShadow: {
+        'glow': '0 0 20px rgba(14, 165, 233, 0.5)',
+        'glow-lg': '0 0 40px rgba(14, 165, 233, 0.6)',
       },
     },
   },
@@ -92,4 +102,3 @@ const config: Config = {
 };
 
 export default config;
-

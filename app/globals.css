@@ -4,13 +4,16 @@
 
 @layer base {
   :root {
-    --font-geist-sans: 'Inter', system-ui, sans-serif;
-    --font-noto-sans-jp: 'Noto Sans JP', system-ui, sans-serif;
+    --font-inter: 'Inter', system-ui, sans-serif;
+  }
+
+  * {
+    @apply border-gray-200;
   }
 
   body {
-    @apply bg-warm-50 text-gray-900 antialiased;
-    font-family: var(--font-noto-sans-jp), var(--font-geist-sans), system-ui, sans-serif;
+    @apply bg-[#FEFCFB] text-gray-900 antialiased;
+    font-family: var(--font-inter), system-ui, sans-serif;
   }
 
   html {
@@ -19,42 +22,46 @@
 }
 
 @layer utilities {
-  /* Glass morphism utility */
-  .glass {
-    @apply bg-white/10 backdrop-blur-xl border border-white/10;
-  }
-
-  .glass-dark {
-    @apply bg-black/20 backdrop-blur-xl border border-white/5;
-  }
-
-  /* Container query support */
-  .container-query {
-    container-type: inline-size;
-  }
-
-  /* Bento Grid spacing */
-  .bento-gap {
-    @apply gap-4 md:gap-6 lg:gap-8;
-  }
-}
-
-/* Custom scrollbar */
-@layer base {
+  /* Custom scrollbar */
   ::-webkit-scrollbar {
-    width: 10px;
+    width: 12px;
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-warm-100;
+    @apply bg-gray-100;
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-primary-500/40 rounded-full;
+    @apply bg-gray-300 rounded-full;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-primary-500/60;
+    @apply bg-gray-400;
+  }
+
+  /* Glass morphism */
+  .glass {
+    @apply bg-white/80 backdrop-blur-xl border border-gray-200/50;
+  }
+
+  .glass-strong {
+    @apply bg-white/90 backdrop-blur-2xl border border-gray-200/50;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700 bg-clip-text text-transparent;
+  }
+
+  /* Shimmer effect */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.1) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
   }
 }
-
