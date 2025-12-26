@@ -24,12 +24,14 @@ export function MasonryGrid({ images, onImageClick, itemsPerPage = 20 }: Masonry
   const [displayedCount, setDisplayedCount] = useState(itemsPerPage);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [viewportHeight, setViewportHeight] = useState(0);
 
   // レスポンシブな列数の設定
   useEffect(() => {
     const updateColumns = () => {
       const width = window.innerWidth;
       setIsMobile(width < 640);
+      setViewportHeight(window.innerHeight);
       if (width < 640) {
         setColumns(2);
       } else if (width < 1024) {
@@ -48,32 +50,32 @@ export function MasonryGrid({ images, onImageClick, itemsPerPage = 20 }: Masonry
   useEffect(() => {
     if (images.length === 0) return;
 
-    // すべての画像をデフォルト値で即座に表示（サイズ取得をスキップ）
+    // すべての画像をデフォルト値で即座に表示
     const defaultImages: ImageWithAspect[] = images.map((image) => ({
       ...image,
       aspectRatio: image.width && image.height 
         ? image.height / image.width 
-        : 4 / 3, // デフォルトアスペクト比
-      loaded: true, // サイズ取得をスキップするため、loadedをtrueに
+        : 4 / 3,
+      loaded: true,
     }));
 
     setImagesWithAspect(defaultImages);
     setIsLoading(false);
-
-    // バックグラウンドでのサイズ取得を完全にスキップ（パフォーマンス向上）
-    // 必要に応じて、表示されている画像のみサイズを取得する場合は以下を有効化
-    /*
-    const updateImageDimensions = async () => {
-      // 表示されている画像のみサイズを取得
-      const visibleImages = images.slice(0, displayedCount);
-      // ... サイズ取得処理
-    };
-    */
   }, [images]);
+
+  // バーチャルスクロール: 表示範囲内の画像のみ計算
+  const visibleRange = useMemo(() => {
+    if (isMobile) {
+      // モバイル: ビューポートの上下2画面分を表示
+      const buffer = viewportHeight * 2;
+      return { start: 0, end: displayedCount };
+    }
+    return { start: 0, end: displayedCount };
+  }, [isMobile, displayedCount, viewportHeight]);
 
   // Masonry Layoutアルゴリズム（モバイルは2列の交互レイアウト）
   const columnsData = useMemo(() => {
-    const displayedImages = imagesWithAspect.slice(0, displayedCount);
+    const displayedImages = imagesWithAspect.slice(visibleRange.start, visibleRange.end);
     if (displayedImages.length === 0) return [];
 
     if (isMobile) {
@@ -94,18 +96,21 @@ export function MasonryGrid({ images, onImageClick, itemsPerPage = 20 }: Masonry
     });
 
     return cols;
-  }, [imagesWithAspect, columns, displayedCount, isMobile]);
+  }, [imagesWithAspect, columns, visibleRange, isMobile]);
 
   // 無限スクロール用のコールバック（メモ化）
   const handleLoadMore = useCallback(() => {
     if (isLoadingMore || displayedCount >= imagesWithAspect.length) return;
     
     setIsLoadingMore(true);
-    setTimeout(() => {
-      const newCount = Math.min(displayedCount + itemsPerPage, imagesWithAspect.length);
-      setDisplayedCount(newCount);
-      setIsLoadingMore(false);
-    }, 200);
+    // リクエストアニメーションフレームで遅延（パフォーマンス向上）
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        const newCount = Math.min(displayedCount + itemsPerPage, imagesWithAspect.length);
+        setDisplayedCount(newCount);
+        setIsLoadingMore(false);
+      }, 100); // 遅延を短縮
+    });
   }, [isLoadingMore, displayedCount, imagesWithAspect.length, itemsPerPage]);
 
   const hasMore = displayedCount < imagesWithAspect.length;

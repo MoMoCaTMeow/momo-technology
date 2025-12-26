@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { useState, lazy, Suspense } from 'react';
 import { MasonryGrid } from '@/components/gallery/masonry-grid';
-import { Lightbox } from '@/components/gallery/lightbox';
 import { HeroSection } from '@/components/gallery/hero-section';
 import { FilterBar } from '@/components/gallery/filter-bar';
 import { FluidBackground } from '@/components/gallery/fluid-background';
 import { images } from '@/lib/images';
+
+// Lightboxを動的インポート（遅延読み込み）
+const Lightbox = lazy(() => import('@/components/gallery/lightbox').then(mod => ({ default: mod.Lightbox })));
 
 export default function HomePage() {
   const [lightboxIndex, setLightboxIndex] = useState(-1);
@@ -44,13 +45,9 @@ export default function HomePage() {
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-200">
         <div className="container mx-auto px-3 md:px-6 lg:px-8 py-3 md:py-4">
           <div className="flex items-center justify-between">
-            <motion.h1
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="text-lg md:text-xl lg:text-2xl font-bold text-gray-900 tracking-tight"
-            >
+            <h1 className="text-lg md:text-xl lg:text-2xl font-bold text-gray-900 tracking-tight">
               Image Gallery
-            </motion.h1>
+            </h1>
           </div>
         </div>
       </header>
@@ -70,15 +67,19 @@ export default function HomePage() {
         />
       </section>
 
-      {/* Lightbox */}
-      <Lightbox
-        images={images}
-        currentIndex={lightboxIndex}
-        isOpen={isLightboxOpen}
-        onClose={handleClose}
-        onNext={handleNext}
-        onPrevious={handlePrevious}
-      />
+      {/* Lightbox（動的インポート） */}
+      {isLightboxOpen && (
+        <Suspense fallback={null}>
+          <Lightbox
+            images={images}
+            currentIndex={lightboxIndex}
+            isOpen={isLightboxOpen}
+            onClose={handleClose}
+            onNext={handleNext}
+            onPrevious={handlePrevious}
+          />
+        </Suspense>
+      )}
     </main>
   );
 }
