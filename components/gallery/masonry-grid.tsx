@@ -18,6 +18,7 @@ interface ImageWithAspect extends ImageData {
 
 export function MasonryGrid({ images, onImageClick, itemsPerPage = 20 }: MasonryGridProps) {
   const [columns, setColumns] = useState(3);
+  const [isMobile, setIsMobile] = useState(false);
   const [imagesWithAspect, setImagesWithAspect] = useState<ImageWithAspect[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [displayedCount, setDisplayedCount] = useState(itemsPerPage);
@@ -27,9 +28,11 @@ export function MasonryGrid({ images, onImageClick, itemsPerPage = 20 }: Masonry
   // レスポンシブな列数の設定
   useEffect(() => {
     const updateColumns = () => {
-      if (window.innerWidth < 640) {
-        setColumns(1);
-      } else if (window.innerWidth < 1024) {
+      const width = window.innerWidth;
+      setIsMobile(width < 640);
+      if (width < 640) {
+        setColumns(2); // モバイルは2列
+      } else if (width < 1024) {
         setColumns(2);
       } else {
         setColumns(3);
@@ -59,14 +62,13 @@ export function MasonryGrid({ images, onImageClick, itemsPerPage = 20 }: Masonry
 
     // その後、バックグラウンドで実際のサイズを取得して更新
     const updateImageDimensions = async () => {
-      const batchSize = 30; // バッチサイズを大きくする
+      const batchSize = 30;
       
       for (let i = 0; i < images.length; i += batchSize) {
         const batch = images.slice(i, i + batchSize);
         
         await Promise.allSettled(
           batch.map(async (image, batchIndex) => {
-            // 既にサイズが指定されている場合はスキップ
             if (image.width && image.height) {
               const globalIndex = i + batchIndex;
               const aspectRatio = image.height / image.width;
@@ -85,7 +87,6 @@ export function MasonryGrid({ images, onImageClick, itemsPerPage = 20 }: Masonry
             }
 
             try {
-              // 動的にインポートしてブラウザ環境でのみ実行
               const { getImageDimensions } = await import('@/lib/images');
               const dimensions = await getImageDimensions(image.src);
               const aspectRatio = dimensions.height / dimensions.width;
@@ -105,26 +106,33 @@ export function MasonryGrid({ images, onImageClick, itemsPerPage = 20 }: Masonry
                 return updated;
               });
             } catch (error) {
-              // エラー時はデフォルト値のまま（既に設定済み）
               console.warn(`Failed to load dimensions for ${image.src}`);
             }
           })
         );
 
-        // バッチ間で少し待機（ブラウザの負荷を軽減）
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
     };
 
-    // バックグラウンドで実行（非ブロッキング）
     updateImageDimensions();
   }, [images]);
 
-  // Masonry Layoutアルゴリズム
+  // Masonry Layoutアルゴリズム（モバイルは2列の交互レイアウト）
   const columnsData = useMemo(() => {
     const displayedImages = imagesWithAspect.slice(0, displayedCount);
     if (displayedImages.length === 0) return [];
 
+    if (isMobile) {
+      // モバイル: 2列の交互レイアウト
+      const cols: ImageWithAspect[][] = [[], []];
+      displayedImages.forEach((image, index) => {
+        cols[index % 2].push(image);
+      });
+      return cols;
+    }
+
+    // デスクトップ: 通常のMasonry Layout
     const cols: ImageWithAspect[][] = Array.from({ length: columns }, () => []);
     const heights = Array(columns).fill(0);
 
@@ -135,7 +143,7 @@ export function MasonryGrid({ images, onImageClick, itemsPerPage = 20 }: Masonry
     });
 
     return cols;
-  }, [imagesWithAspect, columns, displayedCount]);
+  }, [imagesWithAspect, columns, displayedCount, isMobile]);
 
   // 無限スクロール用のコールバック（メモ化）
   const handleLoadMore = useCallback(() => {
@@ -168,11 +176,20 @@ export function MasonryGrid({ images, onImageClick, itemsPerPage = 20 }: Masonry
     <>
       <div
         ref={containerRef}
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8 px-4 md:px-6 lg:px-8 max-w-7xl mx-auto"
+        className={`
+          ${isMobile 
+            ? 'grid grid-cols-2 gap-2 px-2' 
+            : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8 px-4 md:px-6 lg:px-8'
+          } 
+          max-w-7xl mx-auto
+        `}
       >
         {columnsData.map((column, colIndex) => (
-          <div key={colIndex} className="flex flex-col gap-4 md:gap-6 lg:gap-8">
-            {column.map((image) => {
+          <div 
+            key={colIndex} 
+            className={isMobile ? 'flex flex-col gap-2' : 'flex flex-col gap-4 md:gap-6 lg:gap-8'}
+          >
+            {column.map((image, imageIndex) => {
               const globalIndex = images.findIndex((img) => img.id === image.id);
               
               return (
@@ -181,6 +198,9 @@ export function MasonryGrid({ images, onImageClick, itemsPerPage = 20 }: Masonry
                   image={image}
                   index={globalIndex}
                   columns={columns}
+                  isMobile={isMobile}
+                  columnIndex={colIndex}
+                  imageIndex={imageIndex}
                   onClick={() => onImageClick(globalIndex)}
                 />
               );

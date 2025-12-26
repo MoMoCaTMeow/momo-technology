@@ -15,7 +15,6 @@ export default function HomePage() {
   const isLightboxOpen = lightboxIndex >= 0;
 
   const handleImageClick = (index: number) => {
-    // Filtered images内でのインデックスを元のimages配列のインデックスに変換
     const clickedImage = filteredImages[index];
     const originalIndex = images.findIndex((img) => img.id === clickedImage.id);
     setLightboxIndex(originalIndex);
@@ -43,12 +42,12 @@ export default function HomePage() {
 
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-200">
-        <div className="container mx-auto px-4 md:px-6 lg:px-8 py-4">
+        <div className="container mx-auto px-3 md:px-6 lg:px-8 py-3 md:py-4">
           <div className="flex items-center justify-between">
             <motion.h1
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight"
+              className="text-lg md:text-xl lg:text-2xl font-bold text-gray-900 tracking-tight"
             >
               Image Gallery
             </motion.h1>
@@ -63,7 +62,7 @@ export default function HomePage() {
       <FilterBar images={images} onFilterChange={setFilteredImages} />
 
       {/* Gallery */}
-      <section className="py-8 md:py-12 lg:py-16 relative z-10">
+      <section className="py-4 md:py-8 lg:py-12 relative z-10">
         <MasonryGrid
           images={filteredImages}
           onImageClick={handleImageClick}
