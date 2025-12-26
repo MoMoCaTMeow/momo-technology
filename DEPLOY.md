@@ -8,6 +8,7 @@
 - **Build command**: 任意（Optional）
 - **Deploy command**: 必須（Required）
 - **Build output directory**: 設定項目なし（自動検出）
+- **Build timeout**: 20分（無料プランは15分の可能性あり）
 
 ### 推奨設定
 
@@ -101,14 +102,42 @@ git push origin main
 
 ## 🔧 トラブルシューティング
 
-### ビルドが失敗する場合
+### ビルドがタイムアウトする場合
+
+#### エラー: `Build took too long and was timed out`
+
+**原因**: ビルド時間が20分（無料プランは15分）を超えている
+
+**解決方法**:
+1. **Next.jsのビルド設定を最適化**（実施済み）:
+   - `next.config.ts`でビルド最適化を有効化
+   - `swcMinify: true`でビルド時間を短縮
+   - `optimizePackageImports`でパッケージの最適化
+
+2. **画像ファイルの最適化**:
+   - 画像は既に`unoptimized: true`で最適化を無効化
+   - クライアントサイドでのみ画像サイズを取得（ビルド時には実行されない）
+
+3. **ビルドログを確認**:
+   - Cloudflare Pagesの「Deployments」タブでビルドログを確認
+   - どの処理に時間がかかっているか特定
+
+4. **Cloudflare Pagesのプランを確認**:
+   - 無料プラン: 15分のタイムアウト
+   - 有料プラン: 20分のタイムアウト
+   - 必要に応じてプランをアップグレード
 
 #### エラー: `npm ci` failed / package-lock.json out of sync
 
-**原因**: `package-lock.json`と`package.json`が同期していない
+**原因**: Cloudflare Pagesが自動的に`npm ci`を実行しようとしているが、`package-lock.json`が不一致
 
 **解決方法**:
-1. ローカルで`package-lock.json`を再生成:
+1. **`package-lock.json`を削除**（実施済み）:
+   - このプロジェクトでは`package-lock.json`を削除しています
+   - Cloudflare Pagesが`npm install`を使用するようになります
+   - デプロイコマンドに`npm install --legacy-peer-deps`を含めることで、依存関係が正しくインストールされます
+
+2. **または、`package-lock.json`を再生成**:
    ```bash
    rm package-lock.json
    npm install --legacy-peer-deps
@@ -116,9 +145,6 @@ git push origin main
    git commit -m "fix: Update package-lock.json"
    git push origin main
    ```
-
-2. Cloudflare Pagesのデプロイコマンドを確認:
-   - Deploy commandが `npm install --legacy-peer-deps && npm run build` になっているか確認
 
 #### エラー: `Build output directory not found`
 
@@ -132,10 +158,6 @@ git push origin main
   ```
 - デプロイコマンドで`npm run build`が実行されているか確認
 
-#### エラー: `npm install failed`
-
-**解決**: Deploy commandに `--legacy-peer-deps` を追加
-
 ## 📝 現在の設定
 
 - **Framework**: Next.js 15
@@ -144,6 +166,8 @@ git push origin main
 - **画像数**: 747枚（自動検出）
 - **Build command**: `npm install --legacy-peer-deps && npm run build`（任意）
 - **Deploy command**: `npm install --legacy-peer-deps && npm run build`（必須）⚠️
+- **package-lock.json**: 削除済み（`npm install`を使用）
+- **Build optimization**: 有効（`swcMinify`, `optimizePackageImports`）
 
 ## 🚀 デプロイ後の確認
 
@@ -174,6 +198,22 @@ Cloudflare Pagesが自動的に新しいビルドを開始します。
 - **Build command**: 任意（設定しなくても可）
 - **Deploy command**: 必須（必ず設定が必要）
 - **Build output directory**: 設定項目なし（Cloudflare Pagesが自動的に`out`ディレクトリを検出）
+- **Build timeout**: 20分（無料プランは15分の可能性あり）
+
+### ビルドタイムアウトについて
+
+747枚の画像を処理する場合、ビルド時間が長くなる可能性があります。現在の設定で最適化を実施していますが、それでもタイムアウトする場合は：
+
+1. Cloudflare Pagesのプランを確認（無料プランは15分のタイムアウト）
+2. ビルドログを確認して、どの処理に時間がかかっているか特定
+3. 必要に応じて画像数を減らすか、画像の最適化を検討
+
+### package-lock.jsonについて
+
+このプロジェクトでは`package-lock.json`を削除しています。これにより：
+- Cloudflare Pagesが`npm ci`の代わりに`npm install`を使用します
+- デプロイコマンドに`npm install --legacy-peer-deps`を含めることで、依存関係が正しくインストールされます
+- `npm ci`による`package-lock.json`の不一致エラーを回避できます
 
 Next.jsの静的エクスポート（`output: 'export'`）を使用している場合、`npm run build`を実行すると`out`ディレクトリに出力されます。Cloudflare Pagesはこのディレクトリを自動的に検出してデプロイします。
 
