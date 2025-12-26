@@ -1,5 +1,32 @@
 # GitHub & Cloudflare Pages デプロイガイド
 
+## ⚠️ 重要な設定（最新仕様）
+
+### Cloudflare Pagesの設定
+
+**最新のCloudflare Pagesの仕様**:
+- **Build command**: 任意（Optional）
+- **Deploy command**: 必須（Required）
+- **Build output directory**: 設定項目なし（自動検出）
+
+### 推奨設定
+
+**Build command**（任意）:
+```
+npm install --legacy-peer-deps && npm run build
+```
+
+**Deploy command**（必須）:
+```
+npm install --legacy-peer-deps && npm run build
+```
+
+**Path**: `/`
+
+**Non-production branch deploy command**: （空白）
+
+---
+
 ## 📋 デプロイ手順
 
 ### 1. GitHubにプッシュ
@@ -12,7 +39,7 @@ git status
 git add -A
 
 # コミット
-git commit -m "feat: Fix package-lock.json and update gallery"
+git commit -m "feat: Update gallery website"
 
 # GitHubにプッシュ
 git push origin main
@@ -24,29 +51,31 @@ git push origin main
    - https://dash.cloudflare.com にアクセス
    - アカウントにログイン
 
-2. **既存のプロジェクトを編集**
+2. **プロジェクトの設定を開く**
    - 左サイドバーから「Workers & Pages」を選択
    - `momo-technology` プロジェクトを選択
    - 「Settings」タブを開く
    - 「Builds & deployments」セクションを開く
 
-3. **ビルド設定を更新**
+3. **ビルド設定を確認・更新**
 
-   **Build command**:
+   **Build command**（任意）:
    ```
    npm install --legacy-peer-deps && npm run build
    ```
-   
-   **重要**: Cloudflare Pagesはデフォルトで`npm ci`を使用しますが、依存関係の不一致を避けるため、上記のコマンドを**必ず**設定してください。
+   または空白のままでも可
 
-   **Build output directory**:
+   **Deploy command**（必須）:
    ```
-   out
+   npm install --legacy-peer-deps && npm run build
    ```
+   ⚠️ **このコマンドが必須です**
 
-   **Root directory**: （空白のまま）
+   **Path**: `/`
 
-   **Node version**: `18`（`.nvmrc`で指定済み）
+   **Non-production branch deploy command**: （空白）
+
+   **Node version**: `18`（別のセクションで設定）
 
 4. **保存**
    - 「Save」をクリック
@@ -88,38 +117,33 @@ git push origin main
    git push origin main
    ```
 
-2. Cloudflare Pagesのビルドコマンドを確認:
-   - Build commandが `npm install --legacy-peer-deps && npm run build` になっているか確認
-   - `npm ci`ではなく`npm install`を使用する必要があります
+2. Cloudflare Pagesのデプロイコマンドを確認:
+   - Deploy commandが `npm install --legacy-peer-deps && npm run build` になっているか確認
 
 #### エラー: `Build output directory not found`
 
-**解決**: Build output directoryを `out` に設定
+**原因**: Cloudflare Pagesが`out`ディレクトリを自動検出できていない
+
+**解決方法**:
+- Next.jsの設定で`output: 'export'`が設定されているか確認
+- `next.config.ts`を確認:
+  ```typescript
+  output: 'export',
+  ```
+- デプロイコマンドで`npm run build`が実行されているか確認
 
 #### エラー: `npm install failed`
 
-**解決**: Build commandに `--legacy-peer-deps` を追加
-
-#### エラー: `Node version mismatch`
-
-**解決**: `.nvmrc` ファイルでNode.js 18を指定済み
-
-### 画像が表示されない場合
-
-1. **画像パスの確認**
-   - `public/images/` フォルダに画像があるか確認
-   - 画像パスが `/images/ファイル名` になっているか確認
-
-2. **ビルド後の確認**
-   - `out/images/` フォルダに画像がコピーされているか確認
+**解決**: Deploy commandに `--legacy-peer-deps` を追加
 
 ## 📝 現在の設定
 
 - **Framework**: Next.js 15
-- **Build output**: Static Export (`out/`)
+- **Build output**: Static Export (`out/`) - 自動検出
 - **Node version**: 18 (`.nvmrc`で指定)
 - **画像数**: 747枚（自動検出）
-- **Build command**: `npm install --legacy-peer-deps && npm run build`
+- **Build command**: `npm install --legacy-peer-deps && npm run build`（任意）
+- **Deploy command**: `npm install --legacy-peer-deps && npm run build`（必須）⚠️
 
 ## 🚀 デプロイ後の確認
 
@@ -145,11 +169,12 @@ Cloudflare Pagesが自動的に新しいビルドを開始します。
 
 ## ⚠️ 重要な注意事項
 
-Cloudflare Pagesはデフォルトで`npm ci`を使用しますが、このプロジェクトでは`npm install --legacy-peer-deps`を使用する必要があります。
+### Cloudflare Pagesの最新仕様
 
-**必ず**Cloudflare Pagesの設定で、Build commandを以下に設定してください:
-```
-npm install --legacy-peer-deps && npm run build
-```
+- **Build command**: 任意（設定しなくても可）
+- **Deploy command**: 必須（必ず設定が必要）
+- **Build output directory**: 設定項目なし（Cloudflare Pagesが自動的に`out`ディレクトリを検出）
 
-これを設定しないと、`package-lock.json`の不一致エラーが発生します。
+Next.jsの静的エクスポート（`output: 'export'`）を使用している場合、`npm run build`を実行すると`out`ディレクトリに出力されます。Cloudflare Pagesはこのディレクトリを自動的に検出してデプロイします。
+
+**デプロイコマンドには、依存関係のインストールとビルドの両方を含める必要があります。**
