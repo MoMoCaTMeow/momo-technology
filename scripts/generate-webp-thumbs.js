@@ -20,8 +20,9 @@ const { spawnSync } = require('child_process');
 const inputDir = path.join(__dirname, '../public/images');
 const outputDir = path.join(__dirname, '../public/webp');
 
-const WIDTH = String(process.env.WEBP_WIDTH || '640');
-const QUALITY = String(process.env.WEBP_QUALITY || '30');
+// “攻め”設定: さらに小さく・さらに低品質（見る専用）
+const WIDTH = String(process.env.WEBP_WIDTH || '480');
+const QUALITY = String(process.env.WEBP_QUALITY || '25');
 
 function findCwebp() {
   const candidates = [
