@@ -9,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 
 const imagesDir = path.join(__dirname, '../public/images');
+const webpDir = path.join(__dirname, '../public/webp');
 const outputFile = path.join(__dirname, '../lib/images.ts');
 
 function generateImageList() {
@@ -26,9 +27,12 @@ function generateImageList() {
     const imageData = imageFiles.map((file, index) => {
       const id = `img-${index + 1}`;
       const name = path.basename(file, path.extname(file));
+      const webpPath = path.join(webpDir, `${file}.webp`);
+      const hasWebp = fs.existsSync(webpPath);
       return {
         id,
-        src: `/images/${file}`,
+        // 可能なら軽量WebPを優先（未生成なら元画像に knowing fallback）
+        src: hasWebp ? `/webp/${file}.webp` : `/images/${file}`,
         alt: name.replace(/[-_]/g, ' '),
       };
     });
