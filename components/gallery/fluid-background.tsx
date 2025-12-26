@@ -20,20 +20,10 @@ export function FluidBackground() {
     ? window.matchMedia('(prefers-reduced-motion: reduce)').matches 
     : false;
 
-  // モバイルまたはモーション削減設定の場合は静的な背景のみ
-  if (isMobile || prefersReducedMotion) {
-    return (
-      <div
-        className="fixed inset-0 pointer-events-none z-0"
-        style={{ background: '#FEFCFB' }}
-      />
-    );
-  }
-
-  // PC: 軽量なCanvasアニメーション（極限まで最適化）
+  // Canvasアニメーションのセットアップ（PCのみ）
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || isMobile) return;
+    if (!canvas || isMobile || prefersReducedMotion) return;
 
     const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) return;
@@ -97,7 +87,17 @@ export function FluidBackground() {
       cancelAnimationFrame(animationId);
       window.removeEventListener('resize', handleResize);
     };
-  }, [isMobile]);
+  }, [isMobile, prefersReducedMotion]);
+
+  // モバイルまたはモーション削減設定の場合は静的な背景のみ
+  if (isMobile || prefersReducedMotion) {
+    return (
+      <div
+        className="fixed inset-0 pointer-events-none z-0"
+        style={{ background: '#FEFCFB' }}
+      />
+    );
+  }
 
   return (
     <canvas
