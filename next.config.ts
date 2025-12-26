@@ -4,6 +4,9 @@ const nextConfig: NextConfig = {
   output: 'export',
   images: {
     unoptimized: true,
+    // モバイル向けの画像最適化
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
   trailingSlash: true,
   // ビルドパフォーマンスの最適化
@@ -20,14 +23,29 @@ const nextConfig: NextConfig = {
         ...config.optimization,
         moduleIds: 'deterministic',
         usedExports: true,
+        // チャンクサイズの最適化
+        splitChunks: {
+          chunks: 'all',
+          cacheGroups: {
+            default: false,
+            vendors: false,
+            // Framer Motionを別チャンクに
+            framerMotion: {
+              name: 'framer-motion',
+              test: /[\\/]node_modules[\\/]framer-motion[\\/]/,
+              priority: 20,
+            },
+            // その他のライブラリ
+            vendor: {
+              name: 'vendor',
+              test: /[\\/]node_modules[\\/]/,
+              priority: 10,
+            },
+          },
+        },
       };
     }
     return config;
-  },
-  // ビルド時の警告を抑制（パフォーマンス向上）
-  onDemandEntries: {
-    maxInactiveAge: 25 * 1000,
-    pagesBufferLength: 2,
   },
 };
 

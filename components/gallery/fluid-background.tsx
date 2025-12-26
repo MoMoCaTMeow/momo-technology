@@ -1,22 +1,34 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
 
 export function FluidBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
   const [isReducedMotion, setIsReducedMotion] = useState(false);
 
   useEffect(() => {
+    // モバイル判定
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+
     // モーション削減設定を確認
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     setIsReducedMotion(prefersReducedMotion);
 
     const canvas = canvasRef.current;
-    if (!canvas || prefersReducedMotion) return;
+    // モバイルまたはモーション削減設定の場合は無効化
+    if (!canvas || prefersReducedMotion || window.innerWidth < 640) {
+      return () => window.removeEventListener('resize', checkMobile);
+    }
 
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (!ctx) {
+      return () => window.removeEventListener('resize', checkMobile);
+    }
 
     // キャンバスサイズの設定
     const resizeCanvas = () => {
@@ -35,22 +47,22 @@ export function FluidBackground() {
       radius: number;
     }> = [];
 
-    // パーティクル数を削減（50→20）
+    // パーティクル数を削減（20）
     const particleCount = 20;
     for (let i = 0; i < particleCount; i++) {
       particles.push({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.3, // 速度を下げる
+        vx: (Math.random() - 0.5) * 0.3,
         vy: (Math.random() - 0.5) * 0.3,
-        radius: Math.random() * 80 + 40, // 半径を小さく
+        radius: Math.random() * 80 + 40,
       });
     }
 
     // アニメーションループ（フレームレート制限）
     let animationId: number;
     let lastTime = 0;
-    const targetFPS = 30; // 60fps→30fps
+    const targetFPS = 30;
     const frameInterval = 1000 / targetFPS;
 
     const animate = (currentTime: number) => {
@@ -62,7 +74,6 @@ export function FluidBackground() {
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // パーティクルの更新と描画
       particles.forEach((particle, i) => {
         particle.x += particle.vx;
         particle.y += particle.vy;
@@ -73,7 +84,6 @@ export function FluidBackground() {
         particle.x = Math.max(0, Math.min(canvas.width, particle.x));
         particle.y = Math.max(0, Math.min(canvas.height, particle.y));
 
-        // グラデーションで描画（オフホワイト系）
         const gradient = ctx.createRadialGradient(
           particle.x,
           particle.y,
@@ -82,7 +92,7 @@ export function FluidBackground() {
           particle.y,
           particle.radius
         );
-        gradient.addColorStop(0, 'rgba(255, 252, 248, 0.3)'); // 透明度を下げる
+        gradient.addColorStop(0, 'rgba(255, 252, 248, 0.3)');
         gradient.addColorStop(0.5, 'rgba(250, 248, 245, 0.15)');
         gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
 
@@ -91,15 +101,14 @@ export function FluidBackground() {
         ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
         ctx.fill();
 
-        // 接続線の描画を簡略化（距離チェックを緩和）
         particles.slice(i + 1).forEach((otherParticle) => {
           const dx = particle.x - otherParticle.x;
           const dy = particle.y - otherParticle.y;
           const distance = Math.sqrt(dx * dx + dy * dy);
 
-          if (distance < 120) { // 距離を短く
+          if (distance < 120) {
             ctx.strokeStyle = `rgba(250, 248, 245, ${0.15 * (1 - distance / 120)})`;
-            ctx.lineWidth = 0.5; // 線を細く
+            ctx.lineWidth = 0.5;
             ctx.beginPath();
             ctx.moveTo(particle.x, particle.y);
             ctx.lineTo(otherParticle.x, otherParticle.y);
@@ -115,12 +124,13 @@ export function FluidBackground() {
 
     return () => {
       window.removeEventListener('resize', resizeCanvas);
+      window.removeEventListener('resize', checkMobile);
       cancelAnimationFrame(animationId);
     };
   }, []);
 
-  // モーション削減設定の場合は静的な背景のみ
-  if (isReducedMotion) {
+  // モバイルまたはモーション削減設定の場合は静的な背景のみ
+  if (isMobile || isReducedMotion) {
     return (
       <div
         className="fixed inset-0 pointer-events-none z-0"
